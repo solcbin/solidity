@@ -195,6 +195,19 @@ struct CFG
 		std::shared_ptr<DebugData const> debugData;
 		std::vector<BasicBlock*> entries;
 		std::vector<Operation> operations;
+		bool isCutEdgeTarget = false;
+		bool needsCleanStack = false;
+		bool allowsJunk() const {
+			return isCutEdgeTarget && !needsCleanStack;
+		}
+		bool hasLoopEntry() const
+		{
+			for (BasicBlock const* entry: entries)
+				if (Jump const* jump = std::get_if<Jump>(&entry->exit))
+					if (jump->backwards)
+						return true;
+			return false;
+		}
 		std::variant<MainExit, Jump, ConditionalJump, FunctionReturn, Terminated> exit = MainExit{};
 	};
 
@@ -205,6 +218,7 @@ struct CFG
 		BasicBlock* entry = nullptr;
 		std::vector<VariableSlot> parameters;
 		std::vector<VariableSlot> returnVariables;
+		std::vector<BasicBlock*> exits;
 	};
 
 	/// The main entry point, i.e. the start of the outermost Yul block.

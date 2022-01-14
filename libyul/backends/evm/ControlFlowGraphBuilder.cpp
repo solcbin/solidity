@@ -48,7 +48,7 @@ using namespace std;
 
 namespace
 {
-// Removes edges to blocks that are not reachable.
+/// Removes edges to blocks that are not reachable.
 void cleanUnreachable(CFG& _cfg)
 {
 	// Determine which blocks are reachable from the entry.
@@ -77,7 +77,7 @@ void cleanUnreachable(CFG& _cfg)
 			return !reachabilityCheck.visited.count(entry);
 		});
 }
-// Sets the ``recursive`` member to ``true`` for all recursive function calls.
+/// Sets the ``recursive`` member to ``true`` for all recursive function calls.
 void markRecursiveCalls(CFG& _cfg)
 {
 	map<CFG::BasicBlock*, vector<CFG::FunctionCall*>> callsPerBlock;
@@ -124,6 +124,76 @@ void markRecursiveCalls(CFG& _cfg)
 			});
 		}
 }
+void markCutEdgeTargets(CFG& _cfg)
+{
+	static constexpr auto mark = [](CFG::BasicBlock* _root) {
+		map<CFG::BasicBlock*, size_t> d;
+		map<CFG::BasicBlock*, size_t> l;
+		set<CFG::BasicBlock*> visited;
+		size_t t = 0;
+		auto dfs = [&](CFG::BasicBlock* _u, CFG::BasicBlock* _p, auto _recurse) -> void {
+			visited.insert(_u);
+			d[_u] = t; l[_u] = t;
+			++t;
+
+			vector<CFG::BasicBlock*> children = _u->entries;
+			visit(util::GenericVisitor{
+				[&](CFG::BasicBlock::Jump const& _jump) {
+					children.emplace_back(_jump.target);
+				},
+				[&](CFG::BasicBlock::ConditionalJump const& _jump) {
+					children.emplace_back(_jump.zero);
+					children.emplace_back(_jump.nonZero);
+				},
+				[](CFG::BasicBlock::FunctionReturn const&) {},
+				[](CFG::BasicBlock::Terminated const&) {},
+				[](CFG::BasicBlock::MainExit const&) {}
+			}, _u->exit);
+
+			for (CFG::BasicBlock* to: children)
+			{
+				if (to == _p)
+					continue;
+				if (visited.count(to))
+				{
+					l[_u] = min(
+						util::valueOrDefault(l, _u, -1u, util::allow_copy),
+						util::valueOrDefault(d, to, -1u, util::allow_copy)
+					);
+				}
+				else
+				{
+					_recurse(to, _u, _recurse);
+					l[_u] = min(
+						util::valueOrDefault(l, _u, -1u, util::allow_copy),
+						util::valueOrDefault(l, to, -1u, util::allow_copy)
+					);
+					if (l[to] > d[_u] && !to->hasLoopEntry())
+						to->isCutEdgeTarget = true;
+				}
+			}
+		};
+		dfs(_root, nullptr, dfs);
+	};
+
+	mark(_cfg.entry);
+	for (auto& functionInfo: _cfg.functionInfo | ranges::views::values)
+		mark(functionInfo.entry);
+}
+void markNeedsCleanStack(CFG& _cfg)
+{
+	for (auto& functionInfo: _cfg.functionInfo | ranges::views::values)
+		for (CFG::BasicBlock* exit: functionInfo.exits)
+		{
+			util::BreadthFirstSearch<CFG::BasicBlock*> breadthFirstSearch{{exit}};
+			breadthFirstSearch.run([&](CFG::BasicBlock* _block, auto _addChild) {
+				_block->needsCleanStack = true;
+				for (CFG::BasicBlock* entry: _block->entries)
+					_addChild(entry);
+			});
+
+		}
+}
 }
 
 std::unique_ptr<CFG> ControlFlowGraphBuilder::build(
@@ -141,6 +211,8 @@ std::unique_ptr<CFG> ControlFlowGraphBuilder::build(
 
 	cleanUnreachable(*result);
 	markRecursiveCalls(*result);
+	markCutEdgeTargets(*result);
+	markNeedsCleanStack(*result);
 
 	// TODO: It might be worthwhile to run some further simplifications on the graph itself here.
 	// E.g. if there is a jump to a node that has the jumping node as its only entry, the nodes can be fused, etc.
@@ -379,6 +451,7 @@ void ControlFlowGraphBuilder::operator()(Leave const& leave_)
 {
 	yulAssert(m_currentFunction.has_value(), "");
 	m_currentBlock->exit = CFG::BasicBlock::FunctionReturn{debugDataOf(leave_), *m_currentFunction};
+	(*m_currentFunction)->exits.emplace_back(m_currentBlock);
 	m_currentBlock = &m_graph.makeBlock(debugDataOf(*m_currentBlock));
 }
 
@@ -395,6 +468,7 @@ void ControlFlowGraphBuilder::operator()(FunctionDefinition const& _function)
 	builder.m_currentFunction = &functionInfo;
 	builder.m_currentBlock = functionInfo.entry;
 	builder(_function.body);
+	functionInfo.exits.emplace_back(builder.m_currentBlock);
 	builder.m_currentBlock->exit = CFG::BasicBlock::FunctionReturn{debugDataOf(_function), &functionInfo};
 }
 
@@ -423,7 +497,8 @@ void ControlFlowGraphBuilder::registerFunction(FunctionDefinition const& _functi
 				std::get<Scope::Variable>(virtualFunctionScope->identifiers.at(_retVar.name)),
 				_retVar.debugData
 			};
-		}) | ranges::to<vector>
+		}) | ranges::to<vector>,
+		{}
 	})).second;
 	yulAssert(inserted);
 }
