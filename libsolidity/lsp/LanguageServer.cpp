@@ -240,11 +240,10 @@ void LanguageServer::compileAndUpdateDiagnostics()
 
 bool LanguageServer::run()
 {
-	while (runIteration())
-	{
-	}
+	while (isRunning())
+		runIteration();
 
-	return m_state == State::ExitRequested || m_state == State::ExitWithoutShutdown || m_client.closed();
+	return m_state == State::ExitRequested;
 }
 
 void LanguageServer::requireServerInitialized()
@@ -285,7 +284,7 @@ bool LanguageServer::runIteration()
 		m_client.error(id, ErrorCode::InternalError, "Unhandled exception: "s + boost::current_exception_diagnostic_information());
 	}
 
-	return m_state == State::ExitRequested || m_state == State::ExitWithoutShutdown || m_client.closed();
+	return isRunning();
 }
 
 void LanguageServer::handleInitialize(MessageID _id, Json::Value const& _args)
