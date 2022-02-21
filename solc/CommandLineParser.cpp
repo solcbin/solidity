@@ -51,6 +51,7 @@ static string const g_strExperimentalViaIR = "experimental-via-ir";
 static string const g_strGas = "gas";
 static string const g_strHelp = "help";
 static string const g_strImportAst = "import-ast";
+static string const g_strImportEvmAssemblerJson = "import-asm-json";
 static string const g_strInputFile = "input-file";
 static string const g_strYul = "yul";
 static string const g_strYulDialect = "yul-dialect";
@@ -137,6 +138,7 @@ static map<InputMode, string> const g_inputModeName = {
 	{InputMode::StandardJson, "standard JSON"},
 	{InputMode::Linker, "linker"},
 	{InputMode::LanguageServer, "language server (LSP)"},
+	{InputMode::CompilerWithEvmAssemblyJsonImport, "assembler (EVM ASM JSON import)"}
 };
 
 void CommandLineParser::checkMutuallyExclusive(vector<string> const& _optionNames)
@@ -267,6 +269,8 @@ OptimiserSettings CommandLineOptions::optimiserSettings() const
 	if (optimizer.yulSteps.has_value())
 		settings.yulOptimiserSteps = optimizer.yulSteps.value();
 
+	settings.enabled = optimizer.enabled;
+
 	return settings;
 }
 
@@ -316,20 +320,20 @@ void CommandLineParser::parseInputPathsAndRemappings()
 				m_options.input.paths.insert(positionalArg);
 		}
 
-	if (m_options.input.mode == InputMode::StandardJson)
+	if (m_options.input.mode == InputMode::StandardJson || m_options.input.mode == InputMode::CompilerWithEvmAssemblyJsonImport)
 	{
 		if (m_options.input.paths.size() > 1 || (m_options.input.paths.size() == 1 && m_options.input.addStdin))
 			solThrow(
 				CommandLineValidationError,
-				"Too many input files for --" + g_strStandardJSON + ".\n"
+				"Too many input files for --" + (m_options.input.mode == InputMode::StandardJson ? g_strStandardJSON : g_strImportEvmAssemblerJson) + ".\n"
 				"Please either specify a single file name or provide its content on standard input."
 			);
-		else if (m_options.input.paths.size() == 0)
+		else if (m_options.input.paths.empty())
 			// Standard JSON mode input used to be handled separately and zero files meant "read from stdin".
 			// Keep it working that way for backwards-compatibility.
 			m_options.input.addStdin = true;
 	}
-	else if (m_options.input.paths.size() == 0 && !m_options.input.addStdin)
+	else if (m_options.input.paths.empty() && !m_options.input.addStdin)
 		solThrow(
 			CommandLineValidationError,
 			"No input files given. If you wish to use the standard input please specify \"-\" explicitly."
@@ -461,6 +465,7 @@ void CommandLineParser::parseOutputSelection()
 			solAssert(false);
 		case InputMode::Compiler:
 		case InputMode::CompilerWithASTImport:
+		case InputMode::CompilerWithEvmAssemblyJsonImport:
 			return contains(compilerModeOutputs, _outputName);
 		case InputMode::Assembler:
 			return contains(assemblerModeOutputs, _outputName);
@@ -635,6 +640,10 @@ General Information)").c_str(),
 			("Import ASTs to be compiled, assumes input holds the AST in compact JSON format. "
 			"Supported Inputs is the output of the --" + g_strStandardJSON + " or the one produced by "
 			"--" + g_strCombinedJson + " " + CombinedJsonRequests::componentName(&CombinedJsonRequests::ast)).c_str()
+		)
+		(
+			g_strImportEvmAssemblerJson.c_str(),
+			"Import evm assembler json, assumes input holds the evm assembly in JSON format."
 		)
 		(
 			g_strLSP.c_str(),
@@ -892,6 +901,8 @@ void CommandLineParser::processArgs()
 		m_options.input.mode = InputMode::Linker;
 	else if (m_args.count(g_strImportAst) > 0)
 		m_options.input.mode = InputMode::CompilerWithASTImport;
+	else if (m_args.count(g_strImportEvmAssemblerJson) > 0)
+		m_options.input.mode = InputMode::CompilerWithEvmAssemblyJsonImport;
 	else
 		m_options.input.mode = InputMode::Compiler;
 
@@ -1260,7 +1271,11 @@ void CommandLineParser::processArgs()
 	if (m_options.input.mode == InputMode::Compiler)
 		m_options.input.errorRecovery = (m_args.count(g_strErrorRecovery) > 0);
 
-	solAssert(m_options.input.mode == InputMode::Compiler || m_options.input.mode == InputMode::CompilerWithASTImport);
+	solAssert(
+		m_options.input.mode == InputMode::Compiler ||
+		m_options.input.mode == InputMode::CompilerWithASTImport ||
+		m_options.input.mode == InputMode::CompilerWithEvmAssemblyJsonImport
+	);
 }
 
 void CommandLineParser::parseCombinedJsonOption()
