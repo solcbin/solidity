@@ -39,6 +39,7 @@
 #include <sstream>
 #include <memory>
 #include <map>
+#include <utility>
 
 namespace solidity::evmasm
 {
@@ -155,14 +156,27 @@ public:
 
 	/// Create a JSON representation of the assembly.
 	Json::Value assemblyJSON(
-		std::map<std::string, unsigned> const& _sourceIndices = std::map<std::string, unsigned>()
+		std::map<std::string, unsigned> const& _sourceIndices = std::map<std::string, unsigned>(),
+		bool _includeSourceList = true
 	) const;
+
+	bool loadFromAssemblyJSON(Json::Value const& _json, bool _loadSources = true);
 
 	/// Mark this assembly as invalid. Calling ``assemble`` on it will throw.
 	void markAsInvalid() { m_invalid = true; }
 
 	std::vector<size_t> decodeSubPath(size_t _subObjectId) const;
 	size_t encodeSubPath(std::vector<size_t> const& _subPath);
+
+	void setSources(std::vector<std::shared_ptr<std::string const>> _sources) {
+		m_sources = std::move(_sources);
+	}
+
+	void setSources(std::vector<std::string> const& _sources) {
+		for (auto const& item: _sources)
+			m_sources.emplace_back(std::make_shared<std::string>(item));
+	}
+	std::vector<std::shared_ptr<std::string const>> sources() const& { return m_sources; }
 
 protected:
 	/// Does the same operations as @a optimise, but should only be applied to a sub and
@@ -172,10 +186,15 @@ protected:
 
 	unsigned codeSize(unsigned subTagSize) const;
 
+	AssemblyItem loadItemFromJSON(Json::Value const& _json);
+	std::vector<Json::Value> assemblyItemAsJSON(AssemblyItem const& _item, int _sourceIndex) const;
+
 private:
+	bool addAssemblyItemsFromJSON(Json::Value const& _code);
 	static Json::Value createJsonValue(
 		std::string _name,
-		int _source,
+		int _sourceIndex,
+		size_t _modifierDepth,
 		int _begin,
 		int _end,
 		std::string _value = std::string(),
@@ -226,6 +245,8 @@ protected:
 	std::string m_name;
 
 	langutil::SourceLocation m_currentSourceLocation;
+	std::vector<std::shared_ptr<std::string const>> m_sources;
+
 public:
 	size_t m_currentModifierDepth = 0;
 };
