@@ -24,6 +24,7 @@
 
 #include <functional>
 #include <iosfwd>
+#include <list>
 #include <map>
 #include <optional>
 #include <string>
@@ -90,6 +91,26 @@ public:
 	virtual void notify(std::string _method, Json::Value _params) = 0;
 	virtual void reply(MessageID _id, Json::Value _result) = 0;
 	virtual void error(MessageID _id, ErrorCode _code, std::string _message) = 0;
+};
+
+class MockTransport: public Transport
+{
+public:
+	void close() { m_closed = true; }
+	bool closed() const noexcept override;
+	std::optional<Json::Value> receive() override;
+	void notify(std::string _method, Json::Value _params) override;
+	void reply(MessageID _id, Json::Value _result) override;
+	void error(MessageID _id, ErrorCode _code, std::string _message) override;
+
+	void send(Json::Value _message, MessageID _id = Json::nullValue);
+	std::optional<Json::Value> popOutput();
+	void appendInput(Json::Value _message);
+
+private:
+	bool m_closed = false;
+	std::list<Json::Value> m_input {};
+	std::list<Json::Value> m_output {};
 };
 
 /**

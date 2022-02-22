@@ -95,9 +95,27 @@ char* solidity_compile(char const* _input, CStyleReadFileCallback _readCallback,
 /// so we might need a way to trigger a recompile.
 
 /// Switch into LSP mode. Can be undone using solidity_reset().
-void solidity_lsp_start(CStyleReadFileCallback _readCallback, void* _readContext) SOLC_NOEXCEPT;
+///
+/// @returns 0 on success and -1 on failure. A failure can only happen due to mis-use of the API,
+/// such as, the LSP mode has been already initiated.
+int solidity_lsp_start(CStyleReadFileCallback _readCallback, void* _readContext) SOLC_NOEXCEPT;
 
-/// Send one or more JSON-RPC messages to the LSP (including the HTTP headers), expecting a response.
+/// Sends a single JSON-RPC message to the LSP server.
+/// This message must not include any HTTP headers but only hold the payload.
+///
+/// @retval 0 Success.
+/// @retval -1 Server not initialized.
+/// @retval -2 Server not running (e.g. termination initiated).
+/// @retval -3 Could not parse JSON RPC message.
+int solidity_lsp_send(char const* _input) SOLC_NOEXCEPT;
+
+/// Tries to pop a pending message from the LSP server.
+/// @returns either an empty string if not possible
+/// (e.g. no message available or server shut down) or a stringified JSON response message.
+char const* solidity_try_receive() SOLC_NOEXCEPT;
+
+/// Send one or more JSON-RPC messages to the LSP (including the HTTP headers),
+/// expecting a response.
 /// If the input is empty, just checks for a pending response.
 /// @returns JSON-RPC message (inculding HTTP headers), can be empty (or nullptr).
 /// If the result is not null, it has to be freed by the caller using solidity_free.
