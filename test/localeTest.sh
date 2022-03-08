@@ -53,27 +53,31 @@ EOF
 
 # Whatever locale is set by default.
 printTask "Testing the default locale..."
-echo "$test_code" | "$solc_binary" - --bin > /dev/null
+echo "$test_code" | "$solc_binary" - --bin > default_locale_result.out
 
 # Plain C locale
 printTask "Testing the C locale..."
 export LC_ALL=C
 [[ ${i^^} == "I" ]] || assertFail
-echo "$test_code" | "$solc_binary" - --bin > /dev/null
+echo "$test_code" | "$solc_binary" - --bin > c_locale_result.out
+diff_values "$(<default_locale_result.out)" "$(<c_locale_result.out)"
 
 # Turkish locale, which has capitalization rules (`i` -> `İ` and `I` to `ı`) that can make identifiers invalid.
 printTask "Testing the Turkish locale..."
 export LC_ALL=tr_TR.utf8
 [[ ${i^^} != "I" ]] || assertFail
-echo "$test_code" | "$solc_binary" - --bin > /dev/null
+echo "$test_code" | "$solc_binary" - --bin > tr_locale_result.out
+diff_values "$(<default_locale_result.out)" "$(<tr_locale_result.out)"
 
 # A different locale, that should not do anything special to ASCII chars.
 printTask "Testing the Japanese locale..."
 export LC_ALL=ja_JP.eucjp
 [[ ${i^^} == "I" ]] || assertFail
-echo "$test_code" | "$solc_binary" - --bin > /dev/null
+echo "$test_code" | "$solc_binary" - --bin > ja_locale_result.out
+diff_values "$(<default_locale_result.out)" "$(<ja_locale_result.out)"
 
 # The compiler should not crash if the locale is not valid.
 printTask "Testing an invalid locale..."
 export LC_ALL=__invalid_locale__ || true
-echo "$test_code" | "$solc_binary" - --bin > /dev/null
+echo "$test_code" | "$solc_binary" - --bin > invalid_locale_result.out
+diff_values "$(<default_locale_result.out)" "$(<invalid_locale_result.out)"
