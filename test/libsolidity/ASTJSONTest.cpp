@@ -99,12 +99,10 @@ void ASTJSONTest::generateTestVariants(string const& _filename)
 	string_view baseName = _filename;
 	baseName.remove_suffix(4);
 
-	const std::vector<CompilerStack::State> variantCompileStates = {
+	for (CompilerStack::State state: {
 		CompilerStack::State::Parsed,
 		CompilerStack::State::AnalysisPerformed
-	};
-
-	for (const auto state: variantCompileStates)
+	})
 	{
 		auto variant = TestVariant(baseName, state);
 		if (boost::filesystem::exists(variant.astFilename()))
