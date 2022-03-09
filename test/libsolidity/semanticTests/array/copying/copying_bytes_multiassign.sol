@@ -21,7 +21,7 @@ contract sender {
 // compileViaYul: also
 // ----
 // (): 7 ->
-// gas irOptimized: 110954
+// gas irOptimized: 110962
 // gas legacy: 111082
 // gas legacyOptimized: 111027
 // val() -> 0

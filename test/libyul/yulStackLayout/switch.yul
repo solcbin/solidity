@@ -63,10 +63,10 @@
 //
 // Block2 [label="\
 // [ y JUNK JUNK ]\l\
-// [ y 0x42 ]\l\
+// [ JUNK JUNK JUNK y 0x42 ]\l\
 // Assignment(x)\l\
-// [ y x ]\l\
-// [ y ]\l\
+// [ JUNK JUNK JUNK y x ]\l\
+// [ JUNK JUNK JUNK y ]\l\
 // "];
 // Block2 -> Block2Exit [arrowhead=none];
 // Block2Exit [label="Jump" shape=oval];
@@ -85,21 +85,21 @@
 //
 // Block4 [label="\
 // [ JUNK JUNK ]\l\
-// [ 0x42 ]\l\
+// [ JUNK JUNK 0x42 ]\l\
 // Assignment(y)\l\
-// [ y ]\l\
-// [ y ]\l\
+// [ JUNK JUNK y ]\l\
+// [ JUNK JUNK y ]\l\
 // "];
 // Block4 -> Block4Exit [arrowhead=none];
 // Block4Exit [label="Jump" shape=oval];
 // Block4Exit -> Block5;
 //
 // Block5 [label="\
-// [ y ]\l\
-// [ y 0x0404 ]\l\
+// [ JUNK JUNK JUNK JUNK JUNK y ]\l\
+// [ JUNK JUNK JUNK JUNK JUNK y 0x0404 ]\l\
 // sstore\l\
-// [ ]\l\
-// [ ]\l\
+// [ JUNK JUNK JUNK JUNK JUNK ]\l\
+// [ JUNK JUNK JUNK JUNK JUNK ]\l\
 // "];
 // Block5Exit [label="MainExit"];
 // Block5 -> Block5Exit;
