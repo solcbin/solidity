@@ -43,7 +43,7 @@ void GotoDefinition::operator()(MessageID _id, Json::Value const& _args)
 	if (auto const* expression = dynamic_cast<Expression const*>(sourceNode))
 	{
 		// Handles all expressions that can have one or more declaration annotation.
-		for (auto const* declaration: allAnnotatedDeclarations(expression))
+		if (auto const* declaration = allAnnotatedDeclarations(expression))
 			if (auto location = declarationLocation(declaration))
 				locations.emplace_back(move(location.value()));
 	}

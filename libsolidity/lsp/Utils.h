@@ -64,16 +64,13 @@ std::optional<langutil::SourceLocation> parseRange(
 	Json::Value const& _range
 );
 
-/// Extracts all resolved annotations of the given expression AST node.
+/// Extracts the resolved annotation of the given expression AST node.
 ///
-/// This may for example by the type declaration of an identifier,
+/// This may for example be the type declaration of an identifier,
 /// or the type declaration of a structured member identifier.
 ///
-/// The returned vector is empty if the expression was not resolved (maybe due to syntax/semantic error),
-/// or one if resolved.
-/// In the future, it may be possible to return more than one type declaration,
-/// if the type resolver did find more than one possible candidate declaration.
-std::vector<frontend::Declaration const*> allAnnotatedDeclarations(frontend::Expression const* _expression);
+/// @returns the resolved type declaration if found, or nullptr otherwise.
+frontend::Declaration const* allAnnotatedDeclarations(frontend::Expression const* _expression);
 
 /// @returns the location of the declaration's name, if present, or the location of the complete
 /// declaration otherwise. If the input declaration is nullptr, std::nullopt is returned instead.
