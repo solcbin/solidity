@@ -809,6 +809,17 @@ class SolidityLSPTestSuite: # {{{
         self.expect_equal(len(published_diagnostics[1]['diagnostics']), 1)
         self.expect_diagnostic(published_diagnostics[1]['diagnostics'][0], 2072, 31, (8, 19)) # unused variable in lib.sol
 
+        # import directive
+        self.expect_goto_definition_location(
+            solc=solc,
+            document_uri=FILE_URI,
+            document_position=(3, 9), # symbol `"./lib.sol"` in `import "./lib.sol"`
+            expected_uri=LIB_URI,
+            expected_lineNo=0,
+            expected_startEndColumns=(0, 0),
+            description="import directive"
+        )
+
         # type symbol to jump to type defs (error, contract, enum, ...)
         self.expect_goto_definition_location(
             solc=solc,
