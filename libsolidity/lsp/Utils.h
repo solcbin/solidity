@@ -46,7 +46,7 @@ class FileRepository;
 
 std::optional<langutil::LineColumn> parseLineColumn(Json::Value const& _lineColumn);
 Json::Value toJson(langutil::LineColumn _pos);
-Json::Value toJsonRange(langutil::LineColumn const& _start, langutil::LineColumn const& _end);
+Json::Value toJsonRange(langutil::LineColumn _start, langutil::LineColumn _end);
 
 /// @returns the source location given a source unit name and an LSP Range object,
 /// or nullopt on failure.
@@ -64,13 +64,13 @@ std::optional<langutil::SourceLocation> parseRange(
 	Json::Value const& _range
 );
 
-/// Extracts the resolved annotation of the given expression AST node.
+/// Extracts the resolved declaration of the given expression AST node.
 ///
 /// This may for example be the type declaration of an identifier,
 /// or the type declaration of a structured member identifier.
 ///
 /// @returns the resolved type declaration if found, or nullptr otherwise.
-frontend::Declaration const* allAnnotatedDeclarations(frontend::Expression const* _expression);
+frontend::Declaration const* referencedDeclaration(frontend::Expression const* _expression);
 
 /// @returns the location of the declaration's name, if present, or the location of the complete
 /// declaration otherwise. If the input declaration is nullptr, std::nullopt is returned instead.

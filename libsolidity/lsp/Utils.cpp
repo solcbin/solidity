@@ -49,7 +49,7 @@ Json::Value toJson(LineColumn _pos)
 	return json;
 }
 
-Json::Value toJsonRange(LineColumn const& _start, LineColumn const& _end)
+Json::Value toJsonRange(LineColumn _start, LineColumn _end)
 {
 	Json::Value json;
 	json["start"] = toJson(_start);
@@ -57,23 +57,15 @@ Json::Value toJsonRange(LineColumn const& _start, LineColumn const& _end)
 	return json;
 }
 
-Declaration const* allAnnotatedDeclarations(Expression const* _expression)
+Declaration const* referencedDeclaration(Expression const* _expression)
 {
 	if (auto const* identifier = dynamic_cast<Identifier const*>(_expression))
-	{
-		Declaration const* referencedDeclaration = identifier->annotation().referencedDeclaration;
-		if (referencedDeclaration)
-		{
-			lspDebug(fmt::format("referenced declaration: {} {}", typeid(*referencedDeclaration).name(), referencedDeclaration->name()));
+		if (Declaration const* referencedDeclaration = identifier->annotation().referencedDeclaration)
 			return referencedDeclaration;
-		}
-	}
 
 	if (auto const* memberAccess = dynamic_cast<MemberAccess const*>(_expression))
-	{
 		if (memberAccess->annotation().referencedDeclaration)
 			return memberAccess->annotation().referencedDeclaration;
-	}
 
 	return nullptr;
 }
