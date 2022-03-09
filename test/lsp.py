@@ -934,6 +934,76 @@ class SolidityLSPTestSuite: # {{{
             description="User defined type on right hand side."
         )
 
+    def test_textDocument_definition_imports(self, solc: JsonRpcProcess) -> None:
+        self.setup_lsp(solc)
+        FILE_NAME = 'goto_definition_imports'
+        FILE_URI = self.get_test_file_uri(FILE_NAME)
+        LIB_URI = self.get_test_file_uri('lib')
+        solc.send_message('textDocument/didOpen', {
+            'textDocument': {
+                'uri': FILE_URI,
+                'languageId': 'Solidity',
+                'version': 1,
+                'text': self.get_test_file_contents(FILE_NAME)
+            }
+        })
+        published_diagnostics = self.wait_for_diagnostics(solc, 2)
+        self.expect_equal(len(published_diagnostics), 2, "publish diagnostics for 2 files")
+        self.expect_equal(len(published_diagnostics[0]['diagnostics']), 0)
+        self.expect_equal(len(published_diagnostics[1]['diagnostics']), 1)
+        self.expect_diagnostic(published_diagnostics[1]['diagnostics'][0], 2072, 31, (8, 19)) # unused variable in lib.sol
+
+        # import directive: test symbol alias
+        self.expect_goto_definition_location(
+            solc=solc,
+            document_uri=FILE_URI,
+            document_position=(3, 9), #  in `Weather` of `import {Weather as Wetter} from "./lib.sol"`
+            expected_uri=LIB_URI,
+            expected_lineNo=6,
+            expected_startEndColumns=(5, 12),
+            description="goto definition of symbol in symbol alias import directive"
+        )
+
+        # import directive: test symbol alias
+        self.expect_goto_definition_location(
+            solc=solc,
+            document_uri=FILE_URI,
+            document_position=(8, 55), # `Wetter` in return type declaration
+            expected_uri=LIB_URI,
+            expected_lineNo=6,
+            expected_startEndColumns=(5, 12),
+            description="goto definition of symbol in symbol alias import directive"
+        )
+
+        # That.Color tests with `That` being the aliased library to be imported.
+        self.expect_goto_definition_location(
+            solc=solc,
+            document_uri=FILE_URI,
+            document_position=(13, 55), # `That` in return type declaration
+            expected_uri=LIB_URI,
+            expected_lineNo=13,
+            expected_startEndColumns=(5, 10),
+            description="goto definition of symbol in symbol alias import directive"
+        )
+        self.expect_goto_definition_location(
+            solc=solc,
+            document_uri=FILE_URI,
+            document_position=(15, 8),
+            expected_uri=LIB_URI,
+            expected_lineNo=13,
+            expected_startEndColumns=(5, 10),
+            description="`That` in LHS variable assignment"
+        )
+        self.expect_goto_definition_location(
+            solc=solc,
+            document_uri=FILE_URI,
+            document_position=(15, 27),
+            expected_uri=FILE_URI,
+            expected_lineNo=4,
+            expected_startEndColumns=(22, 26),
+            description="`That` in expression"
+        )
+
     def test_textDocument_didChange_empty_file(self, solc: JsonRpcProcess) -> None:
         """
         Starts with an empty file and changes it to look like
