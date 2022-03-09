@@ -355,12 +355,10 @@ ASTNode const* LanguageServer::astNodeAtSourceLocation(std::string const& _sourc
 	if (!m_fileRepository.sourceUnits().count(_sourceUnitName))
 		return nullptr;
 
-	optional<int> sourcePos =
-		m_compilerStack.charStream(_sourceUnitName).translateLineColumnToPosition(_filePos);
-
-	if (!sourcePos)
+	if (optional<int> sourcePos =
+		m_compilerStack.charStream(_sourceUnitName).translateLineColumnToPosition(_filePos))
+		return locateInnermostASTNode(*sourcePos, m_compilerStack.ast(_sourceUnitName));
+	else
 		return nullptr;
-
-	return locateInnermostASTNode(*sourcePos, m_compilerStack.ast(_sourceUnitName));
 }
 
