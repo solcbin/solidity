@@ -43,10 +43,12 @@ using namespace solidity::yul;
 
 DataFlowAnalyzer::DataFlowAnalyzer(
 	Dialect const& _dialect,
-	map<YulString, SideEffects> _functionSideEffects
+	map<YulString, SideEffects> _functionSideEffects,
+	map<YulString, ControlFlowSideEffects> _controlFlowSideEffects
 ):
 	m_dialect(_dialect),
 	m_functionSideEffects(std::move(_functionSideEffects)),
+	m_controlFlowSideEffects(std::move(_controlFlowSideEffects)),
 	m_knowledgeBase(_dialect, m_value)
 {
 	if (auto const* builtin = _dialect.memoryStoreFunction(YulString{}))
@@ -118,12 +120,27 @@ void DataFlowAnalyzer::operator()(If& _if)
 	clearKnowledgeIfInvalidated(*_if.condition);
 	unordered_map<YulString, YulString> storage = m_storage;
 	unordered_map<YulString, YulString> memory = m_memory;
+	map<YulString, AssignedValue> value = m_value;
+	unordered_map<YulString, set<YulString>> references = m_references;
 
 	ASTModifier::operator()(_if);
 
-	joinKnowledge(storage, memory);
-
-	clearValues(assignedVariableNames(_if.body));
+	if (
+		!_if.body.statements.empty() &&
+		TerminationFinder{m_dialect, &m_controlFlowSideEffects}.
+		controlFlowKind(_if.body.statements.back()) != TerminationFinder::ControlFlow::FlowOut
+	)
+	{
+		m_storage = storage;
+		m_memory = memory;
+		m_value = value;
+		m_references = references;
+	}
+	else
+	{
+		joinKnowledge(storage, memory);
+		clearValues(assignedVariableNames(_if.body));
+	}
 }
 
 void DataFlowAnalyzer::operator()(Switch& _switch)

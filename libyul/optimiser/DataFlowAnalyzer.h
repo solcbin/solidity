@@ -28,6 +28,7 @@
 #include <libyul/YulString.h>
 #include <libyul/AST.h> // Needed for m_zero below.
 #include <libyul/SideEffects.h>
+#include <libyul/ControlFlowSideEffects.h>
 
 #include <libsolutil/Common.h>
 
@@ -85,7 +86,8 @@ public:
 	///            The parameter is mostly used to determine movability of expressions.
 	explicit DataFlowAnalyzer(
 		Dialect const& _dialect,
-		std::map<YulString, SideEffects> _functionSideEffects = {}
+		std::map<YulString, SideEffects> _functionSideEffects = {},
+		std::map<YulString, ControlFlowSideEffects> _controlFlowSideEffects = {}
 	);
 
 	using ASTModifier::operator();
@@ -163,6 +165,7 @@ protected:
 	/// Side-effects of user-defined functions. Worst-case side-effects are assumed
 	/// if this is not provided or the function is not found.
 	std::map<YulString, SideEffects> m_functionSideEffects;
+	std::map<YulString, ControlFlowSideEffects> m_controlFlowSideEffects;
 
 	/// Current values of variables, always movable.
 	std::map<YulString, AssignedValue> m_value;
