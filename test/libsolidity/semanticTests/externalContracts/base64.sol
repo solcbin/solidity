@@ -34,7 +34,7 @@ contract test {
 // compileViaYul: also
 // ----
 // constructor()
-// gas irOptimized: 450044
+// gas irOptimized: 449708
 // gas legacy: 766936
 // gas legacyOptimized: 543094
 // encode_inline_asm(bytes): 0x20, 0 -> 0x20, 0
@@ -56,6 +56,6 @@ contract test {
 // gas legacy: 1658033
 // gas legacyOptimized: 1210033
 // encode_no_asm_large()
-// gas irOptimized: 3335101
+// gas irOptimized: 3333101
 // gas legacy: 4801077
 // gas legacyOptimized: 2929077
